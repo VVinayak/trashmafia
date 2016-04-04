@@ -1,0 +1,39 @@
+/
+/login:
+	POST
+	username
+	password
+
+/register:
+	POST
+	name
+	username
+	password
+	address (From google maps autofill, as is)
+	subscription type ('weekly', 'monthly', 'twice a year', 'annually')
+	phone number
+	email
+
+/pickup
+	GET
+	return a list of destinations, to be traversed in that order ({'destinations': ['Place1', 'Place2', 'Place3']})
+
+/client (?)
+
+/pickup/updatepickup
+	POST
+	location (From google maps autofill, as is)
+
+AIzaSyBhGZAQoLq15gOURHWOwq81OSf_nljUZcI
+
+Tables:
+	clients
+	pickupMen
+		_id
+		username
+		password
+		lastTraveled (A UTC timestamp)
+	pickupLogs
+		date
+		pickupmanId
+		List of locations with timestamps ([{'location': 'Place1', 'timestamp': blergh}, ...])
