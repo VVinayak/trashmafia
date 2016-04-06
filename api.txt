@@ -10,6 +10,7 @@
 	username
 	password
 	address (From google maps autofill, as is)
+	address coordinates ([13.09123, 80.01293])
 	subscription type ('weekly', 'monthly', 'twice a year', 'annually')
 	phone number
 	email
@@ -28,6 +29,15 @@ AIzaSyBhGZAQoLq15gOURHWOwq81OSf_nljUZcI
 
 Tables:
 	clients
+		name
+		username
+		password
+		address (From google maps autofill, as is)
+		address coordinates ([13.09123, 80.01293])
+		address coordinates polyline encoded (a string)
+		subscription type ('weekly', 'monthly', 'twice a year', 'annually')
+		phone number
+		email
 	pickupMen
 		_id
 		username

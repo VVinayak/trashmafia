@@ -4,6 +4,8 @@ const dbConnection = require('../dbConnect.js')
 const googleMapsDMatKey = require('../config.js').googleMapsDMatKey;
 const polyline = require('polyline');
 const request = require('request');
+const spawn = require('child_process').spawn;
+const path = require('path');
 const router = express.Router();
 
 function getRoute() {
@@ -29,11 +31,12 @@ function getRoute() {
 		return db.collection('clients').find(
 			{'subscriptionType': {'$in': subscriptionTypes}},
 			{'_id': 1, 'address': 1, 'locationPolyEnc': 1}
-		).limit(5).toArray();
+		).limit(9).toArray();
 	})
 	.then(function (clientList) {
 		const depoAddress = polyline.encode([[13.077828, 80.261369]]); //Chennai Egmore Railway Platform
 		let url = 'https://maps.googleapis.com/maps/api/distancematrix/json?';
+		const urlBack = url;
 		let urlPlaces = '';
 		console.log(clientList);
 		for (const client of clientList) {
@@ -45,25 +48,58 @@ function getRoute() {
 		//console.log(url);
 		//return request(url);
 		return new Promise(function (resolve, reject) {
-			request(url, function (err, res, distMatrix) {
-				if (err || res.statusCode != 200) {
+			request(urlBack, function (err, res, distMatrix) {
+				if (err) {
 					reject(err);
 					return;
 				}
+				if (res.statusCode!= 200) {
+					reject(new Error("Google Map API Error"));
+					return;
+				}
 				console.log(distMatrix);
-				resolve(distMatrix);
+				let coords = clientList.map(client => polyline.decode(client.locationPolyEnc)[0].join(' '));
+				coords.push("13.077828 80.261369");
+				resolve({
+					'distMatrix': distMatrix,
+					'clientList': coords
+				});
 			});
+		});
+	})
+	.then(function (routeInfo) {
+
+		const distMatrix = routeInfo.distMatrix;
+		const clientList = routeInfo.clientList;
+		return new Promise(function (resolve, reject) {
+
+			const child = spawn(path.resolve('./a.out'));
+			child.stdout.setEncoding('utf8');
+			const input = (+clientList.length - 1) + ' 5 ' + clientList.join(' ');
+			let result = '';
+
+			child.on('error', err => {
+				reject(err);
+			});
+			child.stdout.on('data', function (data) {
+				result += data;
+			});
+			child.on('close', function (code) {
+				resolve(result);
+			});
+
+			child.stdin.write(input + '\n');
 		});
 	});
 }
 
 router.get('/', function(req, res, next) {
 	getRoute()
-	.then(function (distMatrixRaw) {
+	/*.then(function (distMatrixRaw) {
 		//console.log(apiRes.statusCode);
 		//if (apiRes.statusCode != 200)
 		//	throw(new Error("Google Map API Error"));
-		/*distMatrix = JSON.parse(distMatrixRaw);
+		distMatrix = JSON.parse(distMatrixRaw);
 		console.log(distMatrix);
 		for (const row of distMatrix.rows) {
 			for (const place of row.elements) {
@@ -71,10 +107,13 @@ router.get('/', function(req, res, next) {
 			}
 			console.log('\n');
 		}
-		res.json(distMatrix);*/
+		res.json(distMatrix);
 		console.log(distMatrixRaw);
 		//res.send(distMatrixRaw);
 		res.json(JSON.parse(distMatrixRaw));
+	})*/
+	.then(function (result) {
+		res.send(result);
 	})
 	.catch(function (err) {
 		console.log(err, err.stack);
