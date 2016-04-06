@@ -3,7 +3,7 @@ const dbConnect = require("./dbConnect.js");
 const polyline = require('polyline');
 
 function insertTestData() {
-	let testData = [
+	let testClientData = [
 		{
 			'address': '11, Vasanta Press Rd, Arunachalapuram, Adyar, Chennai, Tamil Nadu 600020, India',
 			'coords': [13.010134, 80.261377]
@@ -69,9 +69,10 @@ function insertTestData() {
 			'coords': [13.021925, 80.186084]
 		}
 	];
+	let testTruckData = [];
 	let db = null;
 
-	testData = testData.map(function (item, i) {
+	testClientData = testClientData.map(function (item, i) {
 		let newItem = {};
 		newItem['name'] = i + '';
 		newItem['username'] = i + '';
@@ -84,13 +85,26 @@ function insertTestData() {
 		return newItem;
 	});
 
+	let i;
+	for(i = 0; i < 5; ++i) {
+		let newItem = {};
+		newItem['username'] = i;
+		newItem['password'] = i;
+		newItem['lastTraveled'] = Date.now() + Math.floor(Math.random() * 1000);
+		testTruckData.push(newItem);
+	}
+
 	dbConnect.reuse()
 	.then(function (_db) {
 		db = _db;
-		return db.collection('clients').insertMany(testData);
+		return db.collection('clients').insertMany(testClientData);
 	})
 	.then(function (result) {
-		console.log("Inserted 15 sample records.");
+		return db.collection('pickupMen').insertMany(testTruckData);
+	})
+	.then(function (result) {
+		console.log('Inserted 15 sample client records.');
+		console.log('Inserted 5 sample truck driver records.');
 	})
 	.catch(function (err) {
 		console.log(err.stack);
