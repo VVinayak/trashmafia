@@ -19,7 +19,7 @@ function getRoute() {
 		const curDate = new Date(Date.now());
 		let subscriptionTypes = [];
 
-		if (curDate.getDay() == 2)
+		if (curDate.getDay() == 3)
 			subscriptionTypes.push('weekly');
 		if (curDate.getDate() == 1)
 			subscriptionTypes.push('monthly');
@@ -85,7 +85,7 @@ function getRoute() {
 				result += data;
 			});
 			child.on('close', function (code) {
-				resolve(result);
+				resolve(JSON.parse(result));
 			});
 
 			child.stdin.write(input + '\n');
@@ -113,7 +113,7 @@ router.get('/', function(req, res, next) {
 		res.json(JSON.parse(distMatrixRaw));
 	})*/
 	.then(function (result) {
-		res.send(result);
+		res.json(result);
 	})
 	.catch(function (err) {
 		console.log(err, err.stack);

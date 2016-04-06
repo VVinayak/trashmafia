@@ -104,16 +104,17 @@ int main() {
 
 	//Simultaneously output and build clusters
 	for (i = 0; i < noPlaces; ++i) {
-		cout<<clusterMap[i]<<' ';
+		//cout<<clusterMap[i]<<' ';
 		clusters[clusterMap[i]].push_back(i);
 	}
-	cout<<endl;
+	//cout<<endl;
 	//Add depo to each cluster
 	for (i = 0; i < noTrucks; ++i) {
 		clusters[i].push_back(noPlaces);
 	}
 
 	//Find shortest path for each cluster. One truck for one cluster
+	cout<<"{ \"routes\": [";
 	for (i = 0; i < noTrucks; ++i) {
 		//Skip if cluster is empty.
 		if (clusters[i].size() <= 1)
@@ -143,12 +144,17 @@ int main() {
 		} while(next_permutation(clusters[i].begin(), clusters[i].end()));
 
 		//Output the best permutation
-		cout<<i<<' ';
-		for (j = 0; j < clusters[i].size(); ++j) {
-			cout<<clusters[i][j]<<' ';
+		//cout<<i<<' ';
+		cout<<"[";
+		for (j = 0; j < clusters[i].size() - 1; ++j) {
+			cout<<clusters[i][j]<<", ";
 		}
-		cout<<endl;
+		if (i == noTrucks - 1)
+			cout<<clusters[i][clusters[i].size() - 1]<<"]";
+		else
+			cout<<clusters[i][clusters[i].size() - 1]<<"], ";
 	}
+	cout<<"]}";
 
 	return 0;
 }
