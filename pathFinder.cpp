@@ -102,22 +102,16 @@ int main() {
 	//Execute clustering algorithm to group clients into clusters
 	kCluster(coords, clusterMap, noPlaces, noTrucks);
 
-	//Simultaneously output and build clusters
+	//Build clusters
 	for (i = 0; i < noPlaces; ++i) {
-		//cout<<clusterMap[i]<<' ';
 		clusters[clusterMap[i]].push_back(i);
-	}
-	//cout<<endl;
-	//Add depo to each cluster
-	for (i = 0; i < noTrucks; ++i) {
-		clusters[i].push_back(noPlaces);
 	}
 
 	//Find shortest path for each cluster. One truck for one cluster
 	cout<<"{ \"routes\": [";
 	for (i = 0; i < noTrucks; ++i) {
 		//Skip if cluster is empty.
-		if (clusters[i].size() <= 1)
+		if (clusters[i].size() <= 0)
 			continue;
 
 		//Initialize optimal permutation of clients and minimum distance
@@ -126,7 +120,8 @@ int main() {
 
 		for (j = 0; j < clusters[i].size() - 1; ++j)
 			minCost += distMatrix[clusters[i][j]][clusters[i][j + 1]];
-		minCost += distMatrix[clusters[i][clusters[i].size() - 1]][clusters[i][0]];
+		minCost += distMatrix[clusters[i][0]][noPlaces]; //From depo to first place in cluster
+		minCost += distMatrix[clusters[i][clusters[i].size() - 1]][noPlaces]; //From last place in cluster to depo
 
 		//Go over all permutations in this cluster
 		do {
@@ -134,7 +129,8 @@ int main() {
 
 			for (j = 0; j < clusters[i].size() - 1; ++j)
 				cost += distMatrix[clusters[i][j]][clusters[i][j + 1]];
-			cost += distMatrix[clusters[i][clusters[i].size() - 1]][clusters[i][0]];
+			cost += distMatrix[clusters[i][0]][noPlaces];
+			cost += distMatrix[clusters[i][clusters[i].size() - 1]][noPlaces];
 
 			if (cost < minCost) {
 				minPerm = clusters[i];
@@ -144,7 +140,6 @@ int main() {
 		} while(next_permutation(clusters[i].begin(), clusters[i].end()));
 
 		//Output the best permutation
-		//cout<<i<<' ';
 		cout<<"[";
 		for (j = 0; j < clusters[i].size() - 1; ++j) {
 			cout<<clusters[i][j]<<", ";
