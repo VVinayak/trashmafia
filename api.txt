@@ -17,7 +17,7 @@
 
 /pickup
 	GET
-	return a list of destinations, to be traversed in that order ({'destinations': ['Place1', 'Place2', 'Place3']})
+	return a list of destinations, to be traversed in that order ({'destinations': [{'address': 'Place1', 'coords': [13.090, 80.09809]}, ...]})
 
 /client (?)
 
@@ -47,3 +47,6 @@ Tables:
 		date
 		pickupmanId
 		List of locations with timestamps ([{'location': 'Place1', 'timestamp': blergh}, ...])
+	routes
+		date
+		routes
