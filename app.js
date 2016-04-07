@@ -5,7 +5,7 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var Promise = require('bluebird');
-//Promise.promisifyAll(require('request'));
+var session = require('express-session');
 
 var login = require('./routes/index');
 var pickup = require('./routes/pickup');
@@ -22,6 +22,7 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(session({'secret': 'penguins are really cool'}));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', login);

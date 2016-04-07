@@ -110,7 +110,7 @@ function calcRoute(req) {
 	})
 	.then(function () {
 		let toInsert = {};
-		const curPickupManUsername = 2;
+		const curPickupManUsername = req.session['username'];
 		let curPickUpManRoute = [];
 
 		for (let i = 0; i < pickupMen.length; ++i) {
@@ -132,7 +132,7 @@ function calcRoute(req) {
 	});
 }
 
-function getRoute() {
+function getRoute(req) {
 
 	let db = null;
 	let routes = null;
@@ -162,7 +162,7 @@ function getRoute() {
 	.then(function (_routes) {
 		routes = _routes;
 		console.log(routes);
-		return db.collection('pickupMen').findOne({'username': 2}, {'_id': 1});
+		return db.collection('pickupMen').findOne({'username': req.session['username']}, {'_id': 1});
 	})
 	.then(function (curPickUpMan) {
 		const curPickUpManId = curPickUpMan._id;
@@ -190,7 +190,7 @@ function getRoute() {
 }
 
 router.get('/', function(req, res, next) {
-	getRoute()
+	getRoute(req)
 	.then(function (route) {
 		if (route) {
 			return Promise.resolve(route);
