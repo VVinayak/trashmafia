@@ -44,8 +44,10 @@ function calcRoute(req) {
 			subscriptionTypes.push('monthly');
 		if (curDate.getMonth() == 7)
 			subscriptionTypes.push('twice a year');
-		else if (curDate.getMonth() == 1)
+		else if (curDate.getMonth() == 1) {
+			subscriptionTypes.push('twice a year');
 			subscriptionTypes.push('annually');
+		}
 
 		return db.collection('clients').find(
 			{'subscriptionType': {'$in': subscriptionTypes}},
