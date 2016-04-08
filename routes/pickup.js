@@ -7,6 +7,7 @@ const request = require('request');
 const spawn = require('child_process').spawn;
 const path = require('path');
 const mongodb = require('mongodb');
+const config = require('../config.js');
 const router = express.Router();
 
 function getPrevDate() {
@@ -37,14 +38,15 @@ function calcRoute(req) {
 		db = _db;
 		const curDate = new Date(Date.now());
 		let subscriptionTypes = [];
+		const clientSubscriptionData = config.clientSubscriptionData
 
-		if (curDate.getDay() == 5)
+		if (curDate.getDay() == clientSubscriptionData.weekly)
 			subscriptionTypes.push('weekly');
-		if (curDate.getDate() == 1)
+		if (curDate.getDate() == clientSubscriptionData.monthly)
 			subscriptionTypes.push('monthly');
-		if (curDate.getMonth() == 7)
+		if (clientSubscriptionData.twiceAYear.indexOf(curDate.getMonth()) > -1)
 			subscriptionTypes.push('twice a year');
-		else if (curDate.getMonth() == 1) {
+		if (curDate.getMonth() == clientSubscriptionData.annually) {
 			subscriptionTypes.push('twice a year');
 			subscriptionTypes.push('annually');
 		}
@@ -55,12 +57,11 @@ function calcRoute(req) {
 		).toArray();
 	})
 	.then(function (_clientList) {
-		const depoAddress = polyline.encode([[13.077828, 80.261369]]); //Chennai Egmore Railway Platform
+		const depoAddress = polyline.encode([config.depoCoords]);
 		let url = 'https://maps.googleapis.com/maps/api/distancematrix/json?';
 		const urlBack = url;
 		let urlPlaces = '';
 		clientList = _clientList || [];
-		console.log("clientList", clientList);
 		for (const client of clientList) {
 			urlPlaces += client.locationPolyEnc;
 		}
@@ -79,7 +80,6 @@ function calcRoute(req) {
 					reject(new Error('Google Map API Error'));
 					return;
 				}
-				console.log(distMatrix);
 				resolve(distMatrix);
 			});
 		});
@@ -87,7 +87,7 @@ function calcRoute(req) {
 	.then(function (distMatrix) {
 
 		let coords = clientList.map(client => polyline.decode(client.locationPolyEnc)[0].join(' '))
-		coords.push('13.077828 80.261369');
+		coords.push(config.depoCoords.join(' '));
 
 		return new Promise(function (resolve, reject) {
 
@@ -104,7 +104,6 @@ function calcRoute(req) {
 				result += data;
 			});
 			child.on('close', function (code) {
-				console.log(result);
 				resolve(JSON.parse(result));
 			});
 
@@ -173,15 +172,12 @@ function getRoute(req) {
 	.then(function (_db) {
 
 		db = _db;
-		
 		const prevDate = getPrevDate();
-		console.log("Previous Date", prevDate);
 
 		return db.collection('routes').findOne({'date': {'$gt': Date.parse(prevDate)}});
 	})
 	.then(function (_routes) {
 		routes = _routes;
-		console.log("Routes", routes);
 		return db.collection('pickupMen').findOne({'username': req.session['username']}, {'_id': 1});
 	})
 	.then(function (curPickUpMan) {
@@ -249,10 +245,7 @@ function updatePickup(req) {
 					let update = {'$set': {}};
 					const fieldToUpdate = 'routes.' + curPickUpManId;
 					update['$set'][fieldToUpdate] = destinations
-					return db.collection('routes').updateOne(
-						{'_id': routes._id},
-						update
-					)
+					return db.collection('routes').updateOne({'_id': routes._id}, update)
 					.then(function () {
 						return Promise.resolve({'message': 'success'});
 					});
