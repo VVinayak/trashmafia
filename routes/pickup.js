@@ -35,15 +35,15 @@ function calcRoute(req) {
 		return db.collection('clients').find(
 			{'subscriptionType': {'$in': subscriptionTypes}},
 			{'_id': 1, 'address': 1, 'locationPolyEnc': 1}
-		).limit(9).toArray();
+		).toArray();
 	})
 	.then(function (_clientList) {
 		const depoAddress = polyline.encode([[13.077828, 80.261369]]); //Chennai Egmore Railway Platform
 		let url = 'https://maps.googleapis.com/maps/api/distancematrix/json?';
 		const urlBack = url;
 		let urlPlaces = '';
-		clientList = _clientList;
-		console.log(clientList);
+		clientList = _clientList || [];
+		console.log("clientList", clientList);
 		for (const client of clientList) {
 			urlPlaces += client.locationPolyEnc;
 		}
@@ -59,7 +59,7 @@ function calcRoute(req) {
 					return;
 				}
 				if (res.statusCode!= 200) {
-					reject(new Error("Google Map API Error"));
+					reject(new Error('Google Map API Error'));
 					return;
 				}
 				console.log(distMatrix);
@@ -70,7 +70,7 @@ function calcRoute(req) {
 	.then(function (distMatrix) {
 
 		let coords = clientList.map(client => polyline.decode(client.locationPolyEnc)[0].join(' '))
-		coords.push("13.077828 80.261369");
+		coords.push('13.077828 80.261369');
 
 		return new Promise(function (resolve, reject) {
 
@@ -80,12 +80,14 @@ function calcRoute(req) {
 			let result = '';
 
 			child.on('error', err => {
+				console.log("C++ error");
 				reject(err);
 			});
 			child.stdout.on('data', function (data) {
 				result += data;
 			});
 			child.on('close', function (code) {
+				console.log(result);
 				resolve(JSON.parse(result));
 			});
 
@@ -113,15 +115,21 @@ function calcRoute(req) {
 		const curPickupManUsername = req.session['username'];
 		let curPickUpManRoute = [];
 
-		for (let i = 0; i < pickupMen.length; ++i) {
-			toInsert[pickupMen[i]._id] = routes.routes[i].map(placeIndex => clientList[placeIndex]._id);
-			if (pickupMen[i].username == curPickupManUsername)
-				curPickUpManRoute = routes.routes[i].map(placeIndex => {
-					return {
-						'address': clientList[placeIndex].address,
-						'coords': polyline.decode(clientList[placeIndex].locationPolyEnc)[0]
-					}
-				});
+		if (routes.routes.length > 0) {
+			for (let i = 0; i < pickupMen.length; ++i) {
+				toInsert[pickupMen[i]._id] = routes.routes[i].map(placeIndex => clientList[placeIndex]._id);
+				if (pickupMen[i].username == curPickupManUsername)
+					curPickUpManRoute = routes.routes[i].map(placeIndex => {
+						return {
+							'address': clientList[placeIndex].address,
+							'coords': polyline.decode(clientList[placeIndex].locationPolyEnc)[0]
+						}
+					});
+			}
+		}
+		else {
+			toInsert = {};
+			curPickUpManRoute = [];
 		}
 
 		finalRoute = curPickUpManRoute;
@@ -149,7 +157,7 @@ function getRoute(req) {
 		prevDate.setMinutes(59);
 		prevDate.setSeconds(59);
 		prevDate.setMilliseconds(999);
-		console.log(prevDate);
+		console.log("Previous Date", prevDate);
 
 		/*let nextDate = new Date(curDate).setDate(curDate.getDate() + 1);
 		nextDate.setHours(0);
@@ -161,7 +169,7 @@ function getRoute(req) {
 	})
 	.then(function (_routes) {
 		routes = _routes;
-		console.log(routes);
+		console.log("Routes", routes);
 		return db.collection('pickupMen').findOne({'username': req.session['username']}, {'_id': 1});
 	})
 	.then(function (curPickUpMan) {
@@ -189,6 +197,18 @@ function getRoute(req) {
 	});
 }
 
+router.all('/*', function (req, res, next) {
+	if (!req.session || !req.session['username']) {
+		res.json({
+			'status': 'error',
+			'message': 'Unauthorized access - not logged in'
+		});
+	}
+	else {
+		return next();
+	}
+});
+
 router.get('/', function(req, res, next) {
 	getRoute(req)
 	.then(function (route) {
@@ -200,7 +220,7 @@ router.get('/', function(req, res, next) {
 		/*.then(function (distMatrixRaw) {
 			//console.log(apiRes.statusCode);
 			//if (apiRes.statusCode != 200)
-			//	throw(new Error("Google Map API Error"));
+			//	throw(new Error('Google Map API Error'));
 			distMatrix = JSON.parse(distMatrixRaw);
 			console.log(distMatrix);
 			for (const row of distMatrix.rows) {

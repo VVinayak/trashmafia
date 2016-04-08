@@ -99,6 +99,12 @@ int main() {
 		distMatrix[i].push_back(latLongDist(coords[i], depoCoords));
 	distMatrix[noPlaces].push_back(0.0);
 
+	//If client list is empty, return immediately
+	if (noPlaces == 0) {
+		cout<<"{\"routes\": []}";
+		return 0;
+	}
+
 	//Execute clustering algorithm to group clients into clusters
 	kCluster(coords, clusterMap, noPlaces, noTrucks);
 
@@ -107,9 +113,17 @@ int main() {
 		clusters[clusterMap[i]].push_back(i);
 	}
 
+	//Calculate number of non-empty clusters
+	int noClusters = 0, clusterCounter;
+	for (i = 0; i < noTrucks; ++i) {
+		if (clusters[i].size() <= 0)
+			continue;
+		noClusters++;
+	}
+
 	//Find shortest path for each cluster. One truck for one cluster
 	cout<<"{ \"routes\": [";
-	for (i = 0; i < noTrucks; ++i) {
+	for (i = 0, clusterCounter = 0; i < noTrucks; ++i) {
 		//Skip if cluster is empty.
 		if (clusters[i].size() <= 0)
 			continue;
@@ -144,10 +158,12 @@ int main() {
 		for (j = 0; j < clusters[i].size() - 1; ++j) {
 			cout<<clusters[i][j]<<", ";
 		}
-		if (i == noTrucks - 1)
+		if (clusterCounter == noClusters - 1)
 			cout<<clusters[i][clusters[i].size() - 1]<<"]";
 		else
 			cout<<clusters[i][clusters[i].size() - 1]<<"], ";
+		
+		clusterCounter++;
 	}
 	cout<<"]}";
 
