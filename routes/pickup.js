@@ -255,7 +255,7 @@ function updatePickup(req) {
 						return Promise.resolve({'message': 'success'});
 					});
 				}
-				else return Promise.resolve({'message': 'success - empty route for this pickup man anyway'});
+				else return Promise.resolve({'message': 'success'});
 			});
 		}
 		else return Promise.resolve({'message': 'not calculated routes'});
