@@ -1,3 +1,5 @@
+For any error, {'status': 'error', 'message': '...'}
+
 /
 /login:
 	POST
