@@ -19,13 +19,14 @@ For any error, {'status': 'error', 'message': '...'}
 
 /pickup
 	GET
-	return a list of destinations, to be traversed in that order ({'destinations': [{'address': 'Place1', 'coords': [13.090, 80.09809]}, ...]})
+	return a list of destinations, to be traversed in that order ({'destinations': [{'id': <Some string here>, address': 'Place1', 'coords': [13.090, 80.09809], 'status': <'visited' or 'not visited'>}, ...]})
 
 /client (?)
 
 /pickup/updatepickup
 	POST
-	location (From google maps autofill, as is)
+	id of place (received in /pickup)
+	return {'message': 'success'} if success, else return {'message': 'not calculated routes'} if routes haven't been calculated for the day, else return error
 
 AIzaSyBhGZAQoLq15gOURHWOwq81OSf_nljUZcI
 
@@ -48,7 +49,7 @@ Tables:
 	pickupLogs
 		date
 		pickupmanId
-		List of locations with timestamps ([{'location': 'Place1', 'timestamp': blergh}, ...])
+		List of locations with timestamps ([{'location': <_id of place in clients>, 'visitedAt': blergh}, ...])
 	routes
 		date
 		routes

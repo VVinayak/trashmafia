@@ -6,7 +6,22 @@ const polyline = require('polyline');
 const request = require('request');
 const spawn = require('child_process').spawn;
 const path = require('path');
+const mongodb = require('mongodb');
 const router = express.Router();
+
+function getPrevDate() {
+
+	const curDate = new Date(Date.now());
+
+	let prevDate = new Date(curDate);
+	prevDate.setDate(prevDate.getDate() - 1);
+	prevDate.setHours(23);
+	prevDate.setMinutes(59);
+	prevDate.setSeconds(59);
+	prevDate.setMilliseconds(999);
+
+	return prevDate;	
+}
 
 function calcRoute(req) {
 
@@ -23,7 +38,7 @@ function calcRoute(req) {
 		const curDate = new Date(Date.now());
 		let subscriptionTypes = [];
 
-		if (curDate.getDay() == 4)
+		if (curDate.getDay() == 5)
 			subscriptionTypes.push('weekly');
 		if (curDate.getDate() == 1)
 			subscriptionTypes.push('monthly');
@@ -117,13 +132,20 @@ function calcRoute(req) {
 
 		if (routes.routes.length > 0) {
 			for (let i = 0; i < pickupMen.length; ++i) {
-				toInsert[pickupMen[i]._id] = routes.routes[i].map(placeIndex => clientList[placeIndex]._id);
+				toInsert[pickupMen[i]._id] = routes.routes[i].map(placeIndex => {
+					return {
+						'id': clientList[placeIndex]._id,
+						'visitedAt': -1
+					};
+				});
 				if (pickupMen[i].username == curPickupManUsername)
 					curPickUpManRoute = routes.routes[i].map(placeIndex => {
 						return {
+							'id': clientList[placeIndex]._id,
 							'address': clientList[placeIndex].address,
-							'coords': polyline.decode(clientList[placeIndex].locationPolyEnc)[0]
-						}
+							'coords': polyline.decode(clientList[placeIndex].locationPolyEnc)[0],
+							'status': 'not visited'
+						};
 					});
 			}
 		}
@@ -133,7 +155,7 @@ function calcRoute(req) {
 		}
 
 		finalRoute = curPickUpManRoute;
-		return db.collection('routes').insert({'date': Date.now(), 'routes': toInsert});
+		return db.collection('routes').insertOne({'date': Date.now(), 'routes': toInsert});
 	})
 	.then(function () {
 		return Promise.resolve({'destinations': finalRoute});
@@ -149,21 +171,9 @@ function getRoute(req) {
 	.then(function (_db) {
 
 		db = _db;
-		const curDate = new Date(Date.now());
-
-		let prevDate = new Date(curDate);
-		prevDate.setDate(prevDate.getDate() - 1);
-		prevDate.setHours(23);
-		prevDate.setMinutes(59);
-		prevDate.setSeconds(59);
-		prevDate.setMilliseconds(999);
+		
+		const prevDate = getPrevDate();
 		console.log("Previous Date", prevDate);
-
-		/*let nextDate = new Date(curDate).setDate(curDate.getDate() + 1);
-		nextDate.setHours(0);
-		nextDate.setMinutes(0);
-		nextDate.setSeconds(0);
-		nextDate.setMilliseconds(0);*/
 
 		return db.collection('routes').findOne({'date': {'$gt': Date.parse(prevDate)}});
 	})
@@ -176,25 +186,80 @@ function getRoute(req) {
 		const curPickUpManId = curPickUpMan._id;
 		let destinations = [];
 		if (routes) {
-			if (routes.routes[curPickUpManId])
-				destinations = routes.routes[curPickUpManId];
-			return db.collection('clients').find(
-				{'_id': {'$in': destinations}},
-				{'address': 1, 'locationPolyEnc': 1}
-			).toArray()
-			.then(function (clientList) {
-				clientList = clientList.map(client => {
-					return {
-						'address': client.address,
-						'coords': polyline.decode(client.locationPolyEnc)[0]
-					};
+			if (routes.routes[curPickUpManId]) {
+				destinations = routes.routes[curPickUpManId].map(client => client.id);
+				return db.collection('clients').find(
+					{'_id': {'$in': destinations}},
+					{'_id': 1, 'address': 1, 'locationPolyEnc': 1}
+				).toArray()
+				.then(function (clientList) {
+					let clientMap = {};
+					for (const client of clientList) {
+						clientMap[client._id] = client;
+					}
+					const finalRoute = routes.routes[curPickUpManId].map(client => {
+						const id = client.id;
+						return {
+							'id': id,
+							'address': clientMap[id].address,
+							'coords': polyline.decode(clientMap[id].locationPolyEnc)[0],
+							'status': (client.visitedAt == -1) ? 'not visited': 'visited'
+						};
+
+					});
+					return Promise.resolve({'destinations': finalRoute});
 				});
-				return Promise.resolve({'destinations': clientList});
-			});
+			}
+			else
+				return Promise.resolve({'destinations': []});
 		}
 		else
 			return Promise.resolve(null);
 	});
+}
+
+function updatePickup(req) {
+
+	let db = null;
+	let routes = null;
+
+	return dbConnection.reuse()
+	.then(function (_db) {
+		db = _db;
+		const prevDate = getPrevDate();
+
+		return db.collection('routes').findOne({'date': {'$gt': Date.parse(prevDate)}});
+	})
+	.then(function (_routes) {
+		routes = _routes;
+		if (routes) {
+			return db.collection('pickupMen').findOne({'username': req.session['username']}, {'_id': 1})
+			.then(function (curPickupMan) {
+				const curPickUpManId = curPickupMan._id;
+				if (routes.routes[curPickUpManId]) {
+					let destinations = routes.routes[curPickUpManId];
+					for (let i = 0; i < destinations.length; ++i) {
+						if (destinations[i].id == req.body.id) {
+							destinations[i].visitedAt = Date.now();
+							break;
+						}
+					}
+					let update = {'$set': {}};
+					const fieldToUpdate = 'routes.' + curPickUpManId;
+					update['$set'][fieldToUpdate] = destinations
+					return db.collection('routes').updateOne(
+						{'_id': routes._id},
+						update
+					)
+					.then(function () {
+						return Promise.resolve({'message': 'success'});
+					});
+				}
+				else return Promise.resolve({'message': 'success - empty route for this pickup man anyway'});
+			});
+		}
+		else return Promise.resolve({'message': 'not calculated routes'});
+	})
 }
 
 router.all('/*', function (req, res, next) {
@@ -237,6 +302,17 @@ router.get('/', function(req, res, next) {
 	})
 	.then(function (result) {
 		res.json(result);
+	})
+	.catch(function (err) {
+		console.log(err, err.stack);
+		res.sendStatus(500);
+	});
+});
+
+router.post('/updatepickup', function (req, res, next) {
+	updatePickup(req)
+	.then(function (message) {
+		res.json(message);
 	})
 	.catch(function (err) {
 		console.log(err, err.stack);
