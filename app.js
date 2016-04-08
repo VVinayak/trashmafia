@@ -22,7 +22,11 @@ app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(session({'secret': 'penguins are really cool'}));
+app.use(session({
+  'secret': 'penguins are really cool',
+  'resave': false,
+  'saveUninitialized': false
+}));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', login);
