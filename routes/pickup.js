@@ -91,7 +91,7 @@ function calcRoute(req) {
 
 		return new Promise(function (resolve, reject) {
 
-			const child = spawn(path.resolve('./a.out'));
+			const child = spawn(path.resolve(config.pathFinderPath));
 			child.stdout.setEncoding('utf8');
 			const input = (+coords.length - 1) + ' 5 ' + coords.join(' ');
 			let result = '';
