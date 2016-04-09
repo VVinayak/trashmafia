@@ -155,13 +155,13 @@ int main() {
 
 		//Output the best permutation
 		cout<<"[";
-		for (j = 0; j < clusters[i].size() - 1; ++j) {
-			cout<<clusters[i][j]<<", ";
+		for (j = 0; j < minPerm[i].size() - 1; ++j) {
+			cout<<minPerm[j]<<", ";
 		}
 		if (clusterCounter == noClusters - 1)
-			cout<<clusters[i][clusters[i].size() - 1]<<"]";
+			cout<<minPerm[minPerm[i].size() - 1]<<"]";
 		else
-			cout<<clusters[i][clusters[i].size() - 1]<<"], ";
+			cout<<minPerm[minPerm[i].size() - 1]<<"], ";
 		
 		clusterCounter++;
 	}
